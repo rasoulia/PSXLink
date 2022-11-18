@@ -1,0 +1,69 @@
+﻿<Window x:Class="PSXLink.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+        xmlns:local="clr-namespace:PSXLink"
+        xmlns:viewmodel="clr-namespace:PSXLink.MVVM.ViewModels"
+        xmlns:view="clr-namespace:PSXLink.MVVM.Views"
+        mc:Ignorable="d" Background="#232221" WindowStyle="None" WindowStartupLocation="CenterScreen" ResizeMode="NoResize"
+        WindowState="{Binding Path=WindowState,UpdateSourceTrigger=PropertyChanged}"
+        Title="PSXLink" Height="450" MaxHeight="{Binding Path=MaxHeight}" Width="800" MaxWidth="{Binding Path=MaxWidth}">
+    <Window.DataContext>
+        <viewmodel:PSXLinkViewModel/>
+    </Window.DataContext>
+    <Window.Resources>
+        <Style TargetType="Button" BasedOn="{StaticResource MaterialDesignFlatDarkButton}">
+            <Setter Property="Margin" Value="2"/>
+            <Setter Property="Foreground" Value="#CACACA"/>
+        </Style>
+        <Style TargetType="TextBlock" BasedOn="{StaticResource MaterialDesignTextBlock}">
+            <Setter Property="Margin" Value="5 0"/>
+            <Setter Property="Foreground" Value="#CACACA"/>
+            <Setter Property="FontSize" Value="25"/>
+            <Setter Property="HorizontalAlignment" Value="Left"/>
+        </Style>
+    </Window.Resources>
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+        <Border Grid.Row="0" Background="Transparent" MouseLeftButtonDown="Border_MouseLeftButtonDown">
+            <Grid>
+                <StackPanel Orientation="Horizontal" FlowDirection="RightToLeft">
+                    <Button Command="{Binding Path=Close}" Content="{materialDesign:PackIcon Kind=WindowClose}"/>
+                    <Button Command="{Binding Path=Maximize}" Content="{materialDesign:PackIcon Kind=WindowMaximize}"/>
+                    <Button Command="{Binding Path=Minimize}" Content="{materialDesign:PackIcon Kind=WindowMinimize}"/>
+                </StackPanel>
+                <TextBlock Text="PSXLink"/>
+            </Grid>
+        </Border>
+        <TabControl Grid.Row="1">
+            <TabItem Header="Game">
+                <view:GameView/>
+            </TabItem>
+            <TabItem Header="Log">
+                <view:LogView/>
+            </TabItem>
+            <TabItem Header="Tutorial">
+                <RichTextBox Grid.Row="1" IsReadOnly="True" Foreground="White" VerticalScrollBarVisibility="Auto" FontSize="20" Margin="5 0">
+                    <FlowDocument>
+                        <Paragraph>You Can Use 4 Texts Format (seprated by Space Character) for Get and Check Update:</Paragraph>
+                        <Paragraph>1. cusa or CUSA [TitleID(s)], for example: cusa00001 cusa00002</Paragraph>
+                        <Paragraph>2. t or T [TitleID(s) Numbers], for example: t 00001 00002</Paragraph>
+                        <Paragraph>3. i or I [ID(s)] [region], for example: i 15 18 r1</Paragraph>
+                        <Paragraph>4. n or N [ID(s)], for example: n 30 40</Paragraph>
+                        <Paragraph>n => New Game</Paragraph>
+                        <Paragraph>Any other text format is wrong</Paragraph>
+                        <Paragraph/>
+                        <Paragraph>Log:</Paragraph>
+                        <Paragraph>1. If Check Version Enabled First Check Game Version Between Database and Sony Server If It's Diffrent Give You Update Links</Paragraph>
+                        <Paragraph>2. If Check Only Enabled Only Give you Update Links of Those You Want Not All Region of Games</Paragraph>
+                    </FlowDocument>
+                </RichTextBox>
+            </TabItem>
+        </TabControl>
+    </Grid>
+</Window>
