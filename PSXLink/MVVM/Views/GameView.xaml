@@ -39,9 +39,8 @@
                 <TextBox Text="{Binding Path=Game.TitleID,UpdateSourceTrigger=PropertyChanged}" materialDesign:HintAssist.Hint="TitleID: " materialDesign:TextFieldAssist.PrefixText="TitleID: "/>
                 <TextBox Text="{Binding Path=Game.Region,UpdateSourceTrigger=PropertyChanged}" materialDesign:HintAssist.Hint="Region: " materialDesign:TextFieldAssist.PrefixText="Region: "/>
                 <TextBox Text="{Binding Path=Game.Version,UpdateSourceTrigger=PropertyChanged}" materialDesign:HintAssist.Hint="Version: " materialDesign:TextFieldAssist.PrefixText="Version: "/>
-                <ComboBox SelectedValue="{Binding Path=Game.Console,UpdateSourceTrigger=PropertyChanged}" SelectedValuePath="Content" materialDesign:TextFieldAssist.PrefixText="Console: ">
+                <ComboBox SelectedValue="{Binding Path=Game.Console,UpdateSourceTrigger=PropertyChanged}" SelectedIndex="0" SelectedValuePath="Content" materialDesign:TextFieldAssist.PrefixText="Console: ">
                     <ComboBoxItem Content="PS4"/>
-                    <ComboBoxItem Content="PS5"/>
                 </ComboBox>
             </UniformGrid>
             <TextBox Text="{Binding Path=Game.XmlLink,UpdateSourceTrigger=PropertyChanged}" materialDesign:HintAssist.Hint="XmlLink: " materialDesign:TextFieldAssist.PrefixText="XmlLink: "/>

@@ -55,7 +55,7 @@
                 </UniformGrid>
             </UniformGrid>
         </StackPanel>
-        <DataGrid Grid.Row="1" ItemsSource="{Binding Path=LogList}" AutoGenerateColumns="False" IsReadOnly="True">
+        <DataGrid x:Name="LogList" Grid.Row="1" ItemsSource="{Binding Path=LogList}" AutoGenerateColumns="False" IsReadOnly="True" LoadingRow="LogList_LoadingRow">
             <DataGrid.Columns>
                 <DataGridTemplateColumn Header="Link">
                     <DataGridTemplateColumn.CellTemplate>

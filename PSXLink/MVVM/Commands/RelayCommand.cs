@@ -12,11 +12,7 @@ namespace PSXLink.MVVM.Commands
 
         public RelayCommand(Action<object?>? execute, Predicate<object?>? canExecute)
         {
-            if (execute == null)
-            {
-                throw new ArgumentNullException("execute can not be null");
-            }
-            _execute = execute;
+            _execute = execute ?? throw new ArgumentNullException("execute can not be null");
             _canExecute = canExecute;
         }
 

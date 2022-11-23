@@ -19,10 +19,7 @@ namespace PSXLink.MVVM.Data
 
             foreach (string folder in folderName)
             {
-                if (!Directory.Exists(folder))
-                {
-                    Directory.CreateDirectory(folder);
-                }
+                CreateFolder(folder);
             }
         }
 
@@ -30,11 +27,16 @@ namespace PSXLink.MVVM.Data
         {
             title = Regex.Replace(title, @"[^a-zA-Z0-9_ ]+", "", RegexOptions.Compiled);
             string folderName = $"Log\\PS4\\1. Game\\{title}\\{region}. {titileID}";
-            if (!Directory.Exists(folderName))
-            {
-                Directory.CreateDirectory(folderName);
-            }
+            CreateFolder(folderName);
             return folderName;
+        }
+
+        private static void CreateFolder(string path)
+        {
+            if (!Directory.Exists(path))
+            {
+                Directory.CreateDirectory(path);
+            }
         }
 
         public static void OpenFolder(string folderPath)

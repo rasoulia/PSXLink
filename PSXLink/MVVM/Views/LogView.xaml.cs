@@ -1,4 +1,5 @@
 ﻿using PSXLink.MVVM.Models;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 
@@ -17,11 +18,22 @@ namespace PSXLink.MVVM.Views
         private void BtnCopyLink_Click(object sender, RoutedEventArgs e)
         {
             UpdateLog? row = ((Button)e.Source).DataContext as UpdateLog;
-            if (row == null)
+            if (row is null)
             {
                 return;
             }
-            Clipboard.SetText(row.Link);
+            string links = string.Join("\n", row.Link!.Split("\n").Skip(1));
+            Clipboard.SetText(links);
+        }
+
+        private int index = 0;
+        private void LogList_LoadingRow(object sender, DataGridRowEventArgs e)
+        {
+            if (LogList.Items.Count - 1 != index)
+            {
+                index = LogList.Items.Count - 1;
+                LogList.ScrollIntoView(LogList.Items[^1]);
+            }
         }
     }
 }

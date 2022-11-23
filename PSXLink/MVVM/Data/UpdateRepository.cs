@@ -1,6 +1,6 @@
-﻿using PSXLink.MVVM.Models;
+﻿using Microsoft.EntityFrameworkCore;
+using PSXLink.MVVM.Models;
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Net;
 using System.Net.Http;
@@ -14,38 +14,21 @@ namespace PSXLink.MVVM.Data
 {
     public class UpdateRepository
     {
-        private List<UpdateLog> _logs;
         private readonly GameRepository _repository;
 
         public UpdateRepository()
         {
-            _logs = new();
             _repository = new();
         }
 
-        public void AddLog(UpdateLog log)
-        {
-            _logs.Add(log);
-        }
-
-        public List<UpdateLog> ReadLogs()
-        {
-            return _logs;
-        }
-
-        public void ClearLogs()
-        {
-            _logs = new();
-        }
-
-        private async Task<string> GetXmlContent(string? xmllink)
+        private async Task<string> GetWebContent(string? link)
         {
             try
             {
                 HttpClient client = new();
                 client.DefaultRequestHeaders.Add("user-agent", "Only a test!");
                 ServicePointManager.ServerCertificateValidationCallback = new RemoteCertificateValidationCallback(delegate { return true; });
-                string xmlContent = await Task.Run(() => client.GetStringAsync(xmllink));
+                string xmlContent = await Task.Run(() => client.GetStringAsync(link));
                 return await Task.Delay(50).ContinueWith(t => xmlContent);
             }
             catch
@@ -80,12 +63,10 @@ namespace PSXLink.MVVM.Data
 
         public async Task<UpdateLog> CheckUpdate(Game game, bool checkVersion)
         {
-            StringBuilder sbLink = new();
-            StringBuilder sbHash = new();
             UpdateLog log = new();
             XmlDocument xmlDoc = new();
 
-            string xmlContent = await Task.Run(() => GetXmlContent(game.XmlLink));
+            string xmlContent = await Task.Run(() => GetWebContent(game.XmlLink));
             if (!string.IsNullOrEmpty(xmlContent) && xmlContent.TrimStart().StartsWith("<"))
             {
                 xmlDoc.LoadXml(xmlContent);
@@ -95,92 +76,88 @@ namespace PSXLink.MVVM.Data
                 {
                     if (version != game.Version)
                     {
-                        sbLink.AppendLine($"{game?.Title}, {game?.Console}, {game?.TitleID}, {game?.Region}, {version}");
-                        sbHash.AppendLine($"{game?.Title}, {game?.Console}, {game?.TitleID}, {game?.Region}, {version}");
-                        (string link, string hash) = await GetUpdate(xmlContent);
-                        sbLink.AppendLine(link);
-                        sbHash.AppendLine(hash);
-                        sbLink.Replace($"{Environment.NewLine}{Environment.NewLine}", Environment.NewLine);
-                        sbHash.Replace($"{Environment.NewLine}{Environment.NewLine}", Environment.NewLine);
-                        using (StreamWriter writetext = new($"{folderName}\\1. {game?.Version}-Link.txt"))
+                        log = await GetUpdate(xmlContent, game, version, checkVersion, folderName);
+                        if (log.Link?.Length > 1)
                         {
-                            writetext.WriteLine(sbLink.ToString());
+                            game!.Version = version;
+                            await _repository.Update(game);
                         }
-                        using (StreamWriter writetext = new($"{folderName}\\2. {game!.Version}-Hash.txt"))
-                        {
-                            writetext.WriteLine(sbHash.ToString());
-                        }
-
-                        log.Status = $"{game.Title} with TitleID {game.TitleID} Has Update {game.Version} => {version}";
-                        log.Link = sbLink.ToString();
-                        log.Hash = sbHash.ToString();
-
-                        game.Version = version;
-                        await _repository.Update(game);
                     }
                     else
                     {
-                        log.Status = $"{game.Title} with TitleID {game.TitleID} Has Latest Version";
+                        log.Status = $"Latest Update: {game.Title} With TitleID {game.TitleID}";
                     }
                 }
+
                 else
                 {
-                    sbLink.AppendLine($"{game?.Title}, {game?.Console}, {game?.TitleID}, {game?.Region}, {version}");
-                    sbHash.AppendLine($"{game?.Title}, {game?.Console}, {game?.TitleID}, {game?.Region}, {version}");
-                    (string link, string hash) = await GetUpdate(xmlContent);
-                    sbLink.AppendLine(link);
-                    sbHash.AppendLine(hash);
-                    sbLink.Replace($"{Environment.NewLine}{Environment.NewLine}", Environment.NewLine);
-                    sbHash.Replace($"{Environment.NewLine}{Environment.NewLine}", Environment.NewLine);
-                    using (StreamWriter writetext = new($"{folderName}\\1. {game!.Version}-Link.txt"))
+                    log = await GetUpdate(xmlContent, game, version, checkVersion, folderName);
+                    if (log.Link?.Length > 1)
                     {
-                        writetext.WriteLine(sbLink.ToString());
+                        game!.Version = version;
+                        await _repository.Update(game);
                     }
-                    using (StreamWriter writetext = new($"{folderName}\\2. {game.Version}-Hash.txt"))
-                    {
-                        writetext.WriteLine(sbHash.ToString());
-                    }
-
-                    log.Status = $"{game.Title} with TitleID {game.TitleID} Get Update {version}";
-                    log.Link = sbLink.ToString();
-                    log.Hash = sbHash.ToString();
-
-                    game.Version = version;
-                    await _repository.Update(game);
                 }
             }
             return await Task.Delay(100).ContinueWith(t => log);
         }
 
-        public async Task<(string link, string hash)> GetUpdate(string xmlContent)
+        public async Task<UpdateLog> GetUpdate(string xmlContent, Game game, string? version, bool checkVersion, string folderName)
         {
             XmlDocument xmlDoc = new();
             StringBuilder sbLink = new();
             StringBuilder sbHash = new();
-            xmlDoc.LoadXml(xmlContent);
-            XmlNodeList? deltanodelist = xmlDoc.GetElementsByTagName("delta_info_set");
-            string? deltaPKG = deltanodelist[0]?.Attributes!["url"]?.Value;
-            sbLink.AppendLine(deltaPKG);
-            XmlNodeList? pkgnodelist = xmlDoc.GetElementsByTagName("package");
-            using HttpClient client = new();
-            using HttpResponseMessage response = await client.GetAsync(pkgnodelist[0]!.Attributes!["manifest_url"]!.Value);
-            using HttpContent content = response.Content;
-            string json = await content.ReadAsStringAsync();
-            UpdateJson? update = JsonSerializer.Deserialize<UpdateJson>(json);
-            foreach (Piece link in update!.Pieces!)
+            UpdateLog log = new();
+            sbLink.AppendLine($"{game?.Title}, {game?.Console}, {game?.TitleID}, {game?.Region}, {version}");
+            sbHash.AppendLine($"{game?.Title}, {game?.Console}, {game?.TitleID}, {game?.Region}, {version}");
+            try
             {
-                sbLink.AppendLine(link.Url);
-                Uri uri = new(link.Url!);
-                sbHash.AppendLine($"{Path.GetFileName(uri.LocalPath)} : {link.HashValue}");
+                xmlDoc.LoadXml(xmlContent);
+                XmlNodeList? deltanodelist = xmlDoc.GetElementsByTagName("delta_info_set");
+                string? deltaPKG = deltanodelist[0]?.Attributes!["url"]?.Value;
+                sbLink.AppendLine(deltaPKG);
+                XmlNodeList? pkgnodelist = xmlDoc.GetElementsByTagName("package");
+                string json = await GetWebContent(pkgnodelist[0]!.Attributes!["manifest_url"]!.Value);
+                UpdateJson? update = JsonSerializer.Deserialize<UpdateJson>(json);
+                foreach (Piece link in update!.Pieces!)
+                {
+                    sbLink.AppendLine(link.Url);
+                    Uri uri = new(link.Url!);
+                    sbHash.AppendLine($"{Path.GetFileName(uri.LocalPath)} : {link.HashValue}");
+                }
+                sbLink.Replace($"{Environment.NewLine}{Environment.NewLine}", Environment.NewLine);
+                sbHash.Replace($"{Environment.NewLine}{Environment.NewLine}", Environment.NewLine);
+                log.Link = sbLink.ToString();
+                log.Hash = sbHash.ToString();
+                if (checkVersion)
+                {
+                    log.Status = $"New Update: {game?.Title} With TitleID {game?.TitleID} {game?.Version} => {version}";
+                }
+                else
+                {
+                    log.Status = $"Get Update: {game?.Title} With TitleID {game?.TitleID}  {version}";
+                }
+                using (StreamWriter writetext = new($"{folderName}\\1. {version}-Link.txt"))
+                {
+                    writetext.WriteLine(sbLink.ToString());
+                }
+                using (StreamWriter writetext = new($"{folderName}\\2. {version}-Hash.txt"))
+                {
+                    writetext.WriteLine(sbHash.ToString());
+                }
             }
-            return await Task.FromResult((sbLink.ToString(), sbHash.ToString()));
+            catch
+            {
+                log.Status = $"Error: {game?.Title} With TitleID {game?.TitleID}";
+            }
+            return await Task.FromResult(log);
         }
 
         public async Task<UpdateLog> NewGame(Game game)
         {
             using PSXLinkDataContext dbContext = new();
             UpdateLog log = new();
-            string xmlContent = await Task.Run(() => GetXmlContent(game?.XmlLink).Result);
+            string xmlContent = await Task.Run(() => GetWebContent(game?.XmlLink).Result);
             if (!string.IsNullOrEmpty(xmlContent) && xmlContent.TrimStart().StartsWith("<"))
             {
                 XmlDocument xmlDocument = new();
@@ -198,12 +175,31 @@ namespace PSXLink.MVVM.Data
 
                 dbContext.Set<Game>().Update(game);
                 await dbContext.SaveChangesAsync();
-                log.Status = $"TitleID ({game?.TitleID}) is New Game with title ({game?.Title})";
+                log.Status = $"TitleID {game?.TitleID} is New Game With Title {game?.Title}";
             }
             else
             {
                 log.Status = $"TitleID ({game?.TitleID}) is not Game";
             }
+            return await Task.FromResult(log);
+        }
+
+        public async Task<UpdateLog> FirmewarUpdate()
+        {
+            using PSXLinkDataContext dbContext = new();
+            UpdateLog log = new();
+            Firmware fw = await dbContext.Set<Firmware>().FirstAsync(i => i.ID == 1);
+
+            string xml = await GetWebContent(fw.XmlLink);
+            XmlDocument xmlDoc = new();
+            xmlDoc.LoadXml(xml);
+            XmlNodeList version = xmlDoc.GetElementsByTagName("system_pup");
+            fw.Version = version[0]!.Attributes!["label"]!.Value;
+            await dbContext.SaveChangesAsync();
+            XmlNodeList linkNode = xmlDoc.GetElementsByTagName("image");
+            string link = $"Firmware Link {Environment.NewLine}{linkNode[0]!.InnerText.Replace("?dest=us", "")}{Environment.NewLine}{linkNode[1]!.InnerText.Replace("?dest=us", "")}";
+            log.Status = $"Firmware Link: Version => {version[0]!.Attributes!["label"]!.Value}";
+            log.Link = link;
             return await Task.FromResult(log);
         }
     }

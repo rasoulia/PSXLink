@@ -10,6 +10,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Remove="PSXLoading.png" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Content Include="PSXLink.ico" />
   </ItemGroup>
 
@@ -24,6 +28,10 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <SplashScreen Include="PSXLoading.png" />
   </ItemGroup>
 
 </Project>

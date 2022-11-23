@@ -36,7 +36,7 @@ namespace PSXLink.MVVM.Data
         public async Task<List<Game>> ReadAll()
         {
             using PSXLinkDataContext dbContexxt = new();
-            List<Game> entities = await dbContexxt.Set<Game>().ToListAsync();
+            List<Game> entities = await dbContexxt.Set<Game>().Where(t=>t.Title!="Empty").ToListAsync();
             return await Task.FromResult(entities);
         }
 
@@ -47,7 +47,7 @@ namespace PSXLink.MVVM.Data
             {
                 using PSXLinkDataContext dbContexxt = new();
                 Game? find = await dbContexxt.Set<Game>().FirstOrDefaultAsync(f => f.TitleID == entity.TitleID);
-                return await Task.FromResult(find != null);
+                return await Task.FromResult(find is not null);
             }
             catch
             {
@@ -59,7 +59,7 @@ namespace PSXLink.MVVM.Data
         {
             FolderRepository.CreateFolder();
             using PSXLinkDataContext dbContexxt = new();
-            using StreamWriter sw = new($@"Backup\{DateTime.Now:MM-dd-yyyy HH-mm}.json");
+            using StreamWriter sw = new($@"Backup\{DateTime.Now:MM-dd-yyyy HH-mm-ss}.json");
             List<Game> entities = await dbContexxt.Set<Game>().ToListAsync();
             JsonSerializerOptions options = new() { WriteIndented = true };
 

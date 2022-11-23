@@ -8,7 +8,6 @@ using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
-using System.Windows;
 using System.Windows.Input;
 
 namespace PSXLink.MVVM.ViewModels
@@ -28,9 +27,12 @@ namespace PSXLink.MVVM.ViewModels
             _repository = new();
             SettingRepository.LoadSetting();
             FolderRepository.CreateFolder();
+            UpdateLog fw = Task.Run(async()=> await _repository.FirmewarUpdate()).Result;
+            LogList.Add(fw);
         }
 
         public ObservableCollection<UpdateLog> LogList { get; } = new();
+        public List<string> UpdateLinks { get; } = new();
 
         public bool CheckOnly
         {
@@ -96,7 +98,8 @@ namespace PSXLink.MVVM.ViewModels
             for (int i = 1; i < range.Length; i++)
             {
                 Game? game = await dbContext.Set<Game>().FirstOrDefaultAsync(g => g.TitleID == range[i]);
-                if (game != null)
+
+                if (game is not null && game.Region > 0)
                 {
                     UpdateLog log = await _repository.CheckUpdate(game, CheckVersion);
                     LogList.Add(log);
@@ -114,6 +117,12 @@ namespace PSXLink.MVVM.ViewModels
                             }
                         }
                     }
+                }
+                else if (game != null && game.Region == 0)
+                {
+                    UpdateLog log = await _repository.NewGame(game);
+                    LogList.Add(log);
+                    OnPropertyChanged(nameof(LogList));
                 }
                 else
                 {
@@ -134,19 +143,7 @@ namespace PSXLink.MVVM.ViewModels
 
             List<Game> games = await dbContext.Set<Game>().Where(g => g.ID >= start && g.ID <= end).Where(r => r.Region == region).ToListAsync();
 
-            if (start > end)
-            {
-                UpdateLog log = new()
-                {
-                    Status = $"Range is Not Valid. {start} is Greater Than {end}"
-                };
-
-                LogList.Add(log);
-                OnPropertyChanged(nameof(LogList));
-                return;
-            }
-
-            if (games.Count == 0)
+            if (games.Count == 0 || start > end)
             {
                 IsNotValid();
                 return;
@@ -160,7 +157,7 @@ namespace PSXLink.MVVM.ViewModels
                 if (!CheckOnly && log.Link?.Length > 1)
                 {
                     List<Game>? otherGames = await dbContext.Set<Game>().Where(o => o.ID != game.ID && o.Title == game.Title).ToListAsync();
-                    if (otherGames != null && otherGames.Any())
+                    if (otherGames is not null && otherGames.Any())
                     {
                         foreach (Game other in otherGames)
                         {
@@ -179,19 +176,7 @@ namespace PSXLink.MVVM.ViewModels
 
             List<Game> games = await dbContext.Set<Game>().Where(g => g.ID >= start && g.ID <= end).Where(r => r.Region == region).ToListAsync();
 
-            if (start > end)
-            {
-                UpdateLog log = new()
-                {
-                    Status = $"Range is Not Valid. {start} is Greater Than {end}"
-                };
-
-                LogList.Add(log);
-                OnPropertyChanged(nameof(LogList));
-                return;
-            }
-
-            if (games.Count == 0)
+            if (games.Count == 0 || start > end)
             {
                 IsNotValid();
                 return;
@@ -220,6 +205,7 @@ namespace PSXLink.MVVM.ViewModels
 
         private async void StartCommand(object? obj)
         {
+            UpdateLinks.Clear();
             Stopwatch watch = new();
             watch.Start();
             UpdateLog log = new()
@@ -229,11 +215,10 @@ namespace PSXLink.MVVM.ViewModels
 
             LogList.Add(log);
             OnPropertyChanged(nameof(LogList));
-            using PSXLinkDataContext dbContext = new();
 
             string[]? range = Range?.ToUpper().Trim().Split(' ');
 
-            if (range != null && range.Length > 1)
+            if (range is not null && range.Length > 1)
             {
                 if (range[0] == "C")
                 {
@@ -298,11 +283,15 @@ namespace PSXLink.MVVM.ViewModels
                 IsNotValid();
             }
             watch.Stop();
+            List<string> linkList = LogList.Where(l => l.Link?.Length > 10).Select(item => item.Link = string.Join("\n", item.Link!.Split("\n").Skip(1))).ToList();
+            UpdateLinks.AddRange(linkList);
+            string links = string.Join("\n", UpdateLinks);
             UpdateLog status = new()
             {
-                Status = $"Operation Complete in {watch.Elapsed}"
+                Status = $"Operation Complete in {watch.Elapsed}",
+                Link = links,
             };
-            _repository.AddLog(status);
+            LogList.Add(status);
             OnPropertyChanged(nameof(LogList));
         }
 
@@ -322,6 +311,8 @@ namespace PSXLink.MVVM.ViewModels
 
         private void ClearLogCommand(object? obj)
         {
+            List<string> linkList = LogList.Where(l => l.Link?.Length > 10).Select(item => item.Link = string.Join("\n", item.Link!.Split("\n").Skip(1))).ToList();
+            UpdateLinks.AddRange(linkList);
             LogList.Clear();
             OnPropertyChanged(nameof(LogList));
         }

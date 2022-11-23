@@ -61,6 +61,8 @@
                         <Paragraph>Log:</Paragraph>
                         <Paragraph>1. If Check Version Enabled First Check Game Version Between Database and Sony Server If It's Diffrent Give You Update Links</Paragraph>
                         <Paragraph>2. If Check Only Enabled Only Give you Update Links of Those You Want Not All Region of Games</Paragraph>
+                        <Paragraph>If You Want Copy Update Link of Some Games You Can Use the Link Button.</Paragraph>
+                        <Paragraph>If You Want Copy All Link Use Link Button For Status of Operation Complete</Paragraph>
                     </FlowDocument>
                 </RichTextBox>
             </TabItem>
